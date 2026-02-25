@@ -1,0 +1,811 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Activités & Restaurants — Pays Baltes & Helsinki</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<style>
+  :root {
+    --ink: #0d0d0d;
+    --paper: #f5f0e8;
+    --cream: #ede8dc;
+    --gold: #c9a84c;
+    --rust: #b85c38;
+    --teal: #2d6a6a;
+    --green: #5a6e3a;
+    --muted: #7a7060;
+    --line: rgba(13,13,13,0.12);
+    --white: #ffffff;
+
+    --vilnius: #7c5cbf;
+    --riga: #2d6a6a;
+    --tallinn: #b85c38;
+    --helsinki: #2a4e6a;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 300;
+    display: grid;
+    grid-template-columns: 420px 1fr;
+    grid-template-rows: 64px 1fr;
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  /* ─── TOP NAV ─── */
+  nav {
+    grid-column: 1 / -1;
+    background: var(--ink);
+    color: var(--paper);
+    display: flex;
+    align-items: center;
+    padding: 0 28px;
+    gap: 24px;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+    z-index: 100;
+  }
+
+  .nav-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 18px;
+    font-style: italic;
+    color: var(--gold);
+    white-space: nowrap;
+  }
+
+  .nav-cities {
+    display: flex;
+    gap: 4px;
+    margin-left: 16px;
+    flex-wrap: nowrap;
+  }
+
+  .city-tab {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    padding: 6px 14px;
+    border-radius: 3px;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: all 0.2s;
+    color: rgba(245,240,232,0.5);
+    white-space: nowrap;
+  }
+
+  .city-tab:hover { color: var(--paper); border-color: rgba(255,255,255,0.15); }
+
+  .city-tab.active { color: var(--ink); font-weight: 500; }
+  .city-tab[data-city="vilnius"].active { background: var(--vilnius); border-color: var(--vilnius); }
+  .city-tab[data-city="riga"].active { background: var(--teal); border-color: var(--teal); }
+  .city-tab[data-city="tallinn"].active { background: var(--tallinn); border-color: var(--tallinn); }
+  .city-tab[data-city="helsinki"].active { background: var(--helsinki); border-color: var(--helsinki); }
+
+  .nav-back {
+    margin-left: auto;
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 2px;
+    color: rgba(245,240,232,0.4);
+    text-decoration: none;
+    text-transform: uppercase;
+    transition: color 0.2s;
+  }
+  .nav-back:hover { color: var(--paper); }
+
+  /* ─── SIDEBAR ─── */
+  aside {
+    background: var(--white);
+    border-right: 1px solid var(--line);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .sidebar-header {
+    padding: 20px 24px 16px;
+    border-bottom: 1px solid var(--line);
+    flex-shrink: 0;
+  }
+
+  .city-name {
+    font-family: 'Playfair Display', serif;
+    font-size: 26px;
+    font-weight: 700;
+  }
+
+  .city-dates {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 2px;
+    color: var(--muted);
+    margin-top: 2px;
+    text-transform: uppercase;
+  }
+
+  /* ADD FORM */
+  .add-form {
+    padding: 16px 24px;
+    border-bottom: 1px solid var(--line);
+    background: var(--paper);
+    flex-shrink: 0;
+  }
+
+  .form-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+
+  .form-row:last-child { margin-bottom: 0; }
+
+  select, input[type="text"] {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    padding: 8px 10px;
+    background: white;
+    color: var(--ink);
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  select:focus, input[type="text"]:focus {
+    border-color: var(--teal);
+  }
+
+  .input-name { flex: 1; }
+  .input-type { width: 120px; flex-shrink: 0; }
+  .input-address { flex: 1; }
+
+  .btn-add {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    padding: 8px 16px;
+    background: var(--ink);
+    color: var(--paper);
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: background 0.2s;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .btn-add:hover { background: var(--teal); }
+
+  /* MAP HINT */
+  .map-hint {
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 1px;
+    color: var(--muted);
+    padding: 6px 24px;
+    border-bottom: 1px solid var(--line);
+    background: var(--cream);
+    flex-shrink: 0;
+  }
+
+  /* ITEMS LIST */
+  .items-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px 16px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--line) transparent;
+  }
+
+  .items-list::-webkit-scrollbar { width: 4px; }
+  .items-list::-webkit-scrollbar-thumb { background: var(--line); border-radius: 2px; }
+
+  .category-group { margin-bottom: 20px; }
+
+  .category-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 8px;
+    padding: 0 8px;
+  }
+
+  .item-card {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: 4px;
+    margin-bottom: 6px;
+    border: 1px solid var(--line);
+    background: white;
+    transition: all 0.2s;
+    cursor: pointer;
+    position: relative;
+  }
+
+  .item-card:hover { border-color: var(--teal); box-shadow: 0 2px 12px rgba(0,0,0,0.06); }
+  .item-card.done { opacity: 0.45; }
+  .item-card.done .item-name { text-decoration: line-through; }
+  .item-card.active-pin { border-color: var(--gold); background: #fffbf0; }
+
+  .item-icon {
+    font-size: 16px;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+
+  .item-content { flex: 1; min-width: 0; }
+
+  .item-name {
+    font-size: 14px;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .item-address {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    margin-top: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .item-actions {
+    display: flex;
+    gap: 4px;
+    flex-shrink: 0;
+  }
+
+  .btn-icon {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 14px;
+    padding: 2px 4px;
+    border-radius: 2px;
+    transition: background 0.15s;
+    opacity: 0.4;
+  }
+
+  .btn-icon:hover { opacity: 1; background: var(--cream); }
+
+  .empty-state {
+    text-align: center;
+    padding: 32px 16px;
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 1px;
+    line-height: 1.8;
+  }
+
+  /* ─── MAP ─── */
+  #map {
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+  }
+
+  /* Custom leaflet popup */
+  .leaflet-popup-content-wrapper {
+    border-radius: 4px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+    font-family: 'DM Sans', sans-serif;
+    border: none;
+  }
+
+  .leaflet-popup-content {
+    margin: 12px 16px;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+
+  .popup-name {
+    font-weight: 500;
+    font-size: 14px;
+    margin-bottom: 2px;
+  }
+
+  .popup-type {
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  /* Geocode loading */
+  .geocoding-hint {
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    color: var(--muted);
+    padding: 4px 24px;
+    background: #f0f7f0;
+    border-bottom: 1px solid var(--line);
+    flex-shrink: 0;
+    display: none;
+  }
+  .geocoding-hint.show { display: block; }
+
+  /* Stats bar */
+  .stats-bar {
+    padding: 8px 24px;
+    border-top: 1px solid var(--line);
+    background: var(--cream);
+    display: flex;
+    gap: 20px;
+    flex-shrink: 0;
+  }
+
+  .stat {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+  }
+
+  .stat strong {
+    font-weight: 500;
+    color: var(--ink);
+  }
+
+  @media (max-width: 768px) {
+    body {
+      grid-template-columns: 1fr;
+      grid-template-rows: 64px 50vh 1fr;
+    }
+    aside {
+      border-right: none;
+      border-bottom: 1px solid var(--line);
+    }
+    #map { min-height: 300px; }
+    .nav-cities { gap: 2px; }
+    .city-tab { padding: 5px 8px; font-size: 9px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-title">Pays Baltes &amp; Helsinki</div>
+  <div class="nav-cities">
+    <div class="city-tab active" data-city="vilnius" onclick="switchCity('vilnius')">Vilnius</div>
+    <div class="city-tab" data-city="riga" onclick="switchCity('riga')">Riga</div>
+    <div class="city-tab" data-city="tallinn" onclick="switchCity('tallinn')">Tallinn</div>
+    <div class="city-tab" data-city="helsinki" onclick="switchCity('helsinki')">Helsinki</div>
+  </div>
+  <a href="index.html" class="nav-back">← Itinéraire</a>
+</nav>
+
+<!-- SIDEBAR -->
+<aside>
+  <div class="sidebar-header">
+    <div class="city-name" id="sidebar-city-name">Vilnius</div>
+    <div class="city-dates" id="sidebar-city-dates">02 – 04 Mars · Lituanie</div>
+  </div>
+
+  <div class="add-form">
+    <div class="form-row">
+      <input type="text" class="input-name" id="input-name" placeholder="Nom du lieu (ex: Café de Paris)" onkeydown="if(event.key==='Enter') addItem()">
+      <select class="input-type" id="input-type">
+        <option value="restaurant">🍽️ Restaurant</option>
+        <option value="bar">🍸 Bar</option>
+        <option value="cafe">☕ Café</option>
+        <option value="activity">🎯 Activité</option>
+        <option value="museum">🏛️ Musée</option>
+        <option value="shop">🛍️ Shopping</option>
+        <option value="nature">🌿 Nature</option>
+        <option value="other">📍 Autre</option>
+      </select>
+    </div>
+    <div class="form-row">
+      <input type="text" class="input-address" id="input-address" placeholder="Adresse ou lieu (pour pin sur la carte)" onkeydown="if(event.key==='Enter') addItem()">
+      <button class="btn-add" onclick="addItem()">+ Ajouter</button>
+    </div>
+  </div>
+
+  <div class="map-hint" id="map-hint">💡 Clique sur un lieu pour le voir sur la carte · Coche pour marquer comme fait</div>
+  <div class="geocoding-hint" id="geocoding-hint">🔍 Recherche de l'adresse sur la carte…</div>
+
+  <div class="items-list" id="items-list"></div>
+
+  <div class="stats-bar" id="stats-bar">
+    <div class="stat"><strong id="stat-total">0</strong> lieux</div>
+    <div class="stat"><strong id="stat-done">0</strong> faits</div>
+    <div class="stat"><strong id="stat-resto">0</strong> restos/bars</div>
+    <div class="stat"><strong id="stat-activ">0</strong> activités</div>
+    <div class="stat" style="margin-left:auto"><span id="sync-status" style="font-family:'DM Mono',monospace;font-size:10px">⏳ Chargement…</span></div>
+  </div>
+</aside>
+
+<!-- MAP -->
+<div id="map"></div>
+
+<script>
+// ─── DATA ───────────────────────────────────────────────────────────────────
+const JSONBIN_ID  = '699ecffeae596e708f48232f';
+const JSONBIN_KEY = '$2a$10$h6gT2GNQ1/P1KCIqCc2NiOXNdYRjRwrr/UXslHFn4AarkDsp/FXpi';
+const JSONBIN_URL = `https://api.jsonbin.io/v3/b/${JSONBIN_ID}`;
+
+const CITIES = {
+  vilnius:  { name: 'Vilnius',  dates: '02 – 04 Mars · Lituanie',  center: [54.6872, 25.2797], zoom: 14, color: '#7c5cbf' },
+  riga:     { name: 'Riga',     dates: '04 – 06 Mars · Lettonie',  center: [56.9496, 24.1052], zoom: 14, color: '#2d6a6a' },
+  tallinn:  { name: 'Tallinn',  dates: '06 – 08 Mars · Estonie',   center: [59.4370, 24.7536], zoom: 14, color: '#b85c38' },
+  helsinki: { name: 'Helsinki', dates: '08 – 11 Mars · Finlande',  center: [60.1699, 24.9384], zoom: 13, color: '#2a4e6a' },
+};
+
+const TYPE_ICONS = {
+  restaurant: '🍽️',
+  bar:        '🍸',
+  cafe:       '☕',
+  activity:   '🎯',
+  museum:     '🏛️',
+  shop:       '🛍️',
+  nature:     '🌿',
+  other:      '📍',
+};
+
+const TYPE_LABELS = {
+  restaurant: 'Restaurant',
+  bar:        'Bar',
+  cafe:       'Café',
+  activity:   'Activité',
+  museum:     'Musée',
+  shop:       'Shopping',
+  nature:     'Nature',
+  other:      'Autre',
+};
+
+// ─── JSONBIN SYNC ────────────────────────────────────────────────────────────
+function showSyncStatus(msg, color = '#7a7060') {
+  let el = document.getElementById('sync-status');
+  if (!el) return;
+  el.textContent = msg;
+  el.style.color = color;
+}
+
+async function loadData() {
+  showSyncStatus('⏳ Chargement…');
+  try {
+    const res = await fetch(JSONBIN_URL + '/latest', {
+      headers: { 'X-Master-Key': JSONBIN_KEY }
+    });
+    const json = await res.json();
+    showSyncStatus('✓ Synchronisé', '#5a6e3a');
+    return json.record || { vilnius: [], riga: [], tallinn: [], helsinki: [] };
+  } catch(e) {
+    showSyncStatus('⚠️ Hors ligne — données locales', '#b85c38');
+    try { return JSON.parse(localStorage.getItem('baltics-items') || '{}'); } catch(_) { return {}; }
+  }
+}
+
+async function saveData() {
+  // Save locally as backup
+  localStorage.setItem('baltics-items', JSON.stringify(allItems));
+  showSyncStatus('💾 Sauvegarde…');
+  try {
+    await fetch(JSONBIN_URL, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Master-Key': JSONBIN_KEY,
+      },
+      body: JSON.stringify(allItems),
+    });
+    showSyncStatus('✓ Sauvegardé', '#5a6e3a');
+  } catch(e) {
+    showSyncStatus('⚠️ Sauvegarde locale uniquement', '#b85c38');
+  }
+}
+
+let allItems = { vilnius: [], riga: [], tallinn: [], helsinki: [] };
+// Ensure all cities exist
+Object.keys(CITIES).forEach(c => { if (!allItems[c]) allItems[c] = []; });
+
+let currentCity = 'vilnius';
+let map, markers = {};
+let activeMarkerId = null;
+
+// ─── MAP ─────────────────────────────────────────────────────────────────────
+function initMap() {
+  map = L.map('map', { zoomControl: true, attributionControl: true });
+
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+    attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> © <a href="https://carto.com/">CARTO</a>',
+    subdomains: 'abcd',
+    maxZoom: 19
+  }).addTo(map);
+
+  const city = CITIES[currentCity];
+  map.setView(city.center, city.zoom);
+}
+
+function makeIcon(type, color, done) {
+  const emoji = TYPE_ICONS[type] || '📍';
+  const opacity = done ? '0.4' : '1';
+  return L.divIcon({
+    className: '',
+    html: `<div style="
+      background:white;
+      border:2.5px solid ${color};
+      border-radius:50%;
+      width:34px;height:34px;
+      display:flex;align-items:center;justify-content:center;
+      font-size:15px;
+      box-shadow:0 2px 8px rgba(0,0,0,0.18);
+      opacity:${opacity};
+      cursor:pointer;
+      transition:transform 0.15s;
+    ">${emoji}</div>`,
+    iconSize: [34, 34],
+    iconAnchor: [17, 17],
+    popupAnchor: [0, -20],
+  });
+}
+
+function clearMarkers() {
+  Object.values(markers).forEach(m => map.removeLayer(m));
+  markers = {};
+}
+
+function renderMarkers() {
+  clearMarkers();
+  const city = CITIES[currentCity];
+  const items = allItems[currentCity] || [];
+  items.forEach(item => {
+    if (item.lat && item.lng) {
+      const marker = L.marker([item.lat, item.lng], {
+        icon: makeIcon(item.type, city.color, item.done)
+      }).addTo(map);
+
+      const popupHtml = `
+        <div class="popup-name">${item.name}</div>
+        <div class="popup-type">${TYPE_ICONS[item.type]} ${TYPE_LABELS[item.type]}</div>
+        ${item.address ? `<div style="font-size:11px;color:#7a7060;margin-top:4px;font-family:DM Mono,monospace">${item.address}</div>` : ''}
+      `;
+      marker.bindPopup(popupHtml, { maxWidth: 220 });
+
+      marker.on('click', () => {
+        highlightItem(item.id);
+      });
+
+      markers[item.id] = marker;
+    }
+  });
+}
+
+// ─── GEOCODE ────────────────────────────────────────────────────────────────
+async function geocode(address, cityName) {
+  const query = encodeURIComponent(`${address}, ${cityName}`);
+  const url = `https://nominatim.openstreetmap.org/search?q=${query}&format=json&limit=1`;
+  try {
+    const res = await fetch(url, { headers: { 'Accept-Language': 'fr' } });
+    const data = await res.json();
+    if (data && data[0]) {
+      return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
+    }
+  } catch(e) {}
+  return null;
+}
+
+// ─── ITEMS ───────────────────────────────────────────────────────────────────
+function generateId() {
+  return Math.random().toString(36).substr(2, 9);
+}
+
+async function addItem() {
+  const name = document.getElementById('input-name').value.trim();
+  const type = document.getElementById('input-type').value;
+  const address = document.getElementById('input-address').value.trim();
+
+  if (!name) {
+    document.getElementById('input-name').focus();
+    return;
+  }
+
+  const item = { id: generateId(), name, type, address, done: false, lat: null, lng: null };
+
+  // Show geocoding hint
+  if (address) {
+    const hint = document.getElementById('geocoding-hint');
+    hint.classList.add('show');
+    const coords = await geocode(address, CITIES[currentCity].name);
+    hint.classList.remove('show');
+    if (coords) { item.lat = coords.lat; item.lng = coords.lng; }
+  }
+
+  allItems[currentCity].push(item);
+  saveData();
+  renderList();
+  renderMarkers();
+
+  // Pan to new marker
+  if (item.lat && item.lng) {
+    map.flyTo([item.lat, item.lng], 16, { duration: 1 });
+    setTimeout(() => {
+      if (markers[item.id]) markers[item.id].openPopup();
+    }, 1100);
+  }
+
+  // Clear inputs
+  document.getElementById('input-name').value = '';
+  document.getElementById('input-address').value = '';
+  document.getElementById('input-name').focus();
+}
+
+function toggleDone(id) {
+  const items = allItems[currentCity];
+  const item = items.find(i => i.id === id);
+  if (item) {
+    item.done = !item.done;
+    saveData();
+    renderList();
+    renderMarkers();
+  }
+}
+
+function deleteItem(id, e) {
+  e.stopPropagation();
+  allItems[currentCity] = allItems[currentCity].filter(i => i.id !== id);
+  saveData();
+  renderList();
+  renderMarkers();
+}
+
+function focusItem(id, e) {
+  if (e) e.stopPropagation();
+  const item = allItems[currentCity].find(i => i.id === id);
+  if (!item) return;
+
+  highlightItem(id);
+
+  if (item.lat && item.lng) {
+    map.flyTo([item.lat, item.lng], 17, { duration: 0.8 });
+    setTimeout(() => {
+      if (markers[id]) markers[id].openPopup();
+    }, 900);
+  }
+}
+
+function highlightItem(id) {
+  activeMarkerId = id;
+  document.querySelectorAll('.item-card').forEach(el => {
+    el.classList.toggle('active-pin', el.dataset.id === id);
+  });
+  // Scroll item into view
+  const el = document.querySelector(`.item-card[data-id="${id}"]`);
+  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+// ─── RENDER ──────────────────────────────────────────────────────────────────
+function renderList() {
+  const items = allItems[currentCity] || [];
+  const container = document.getElementById('items-list');
+
+  if (items.length === 0) {
+    container.innerHTML = `
+      <div class="empty-state">
+        Aucun lieu ajouté pour l'instant.<br>
+        Commence par ajouter un restaurant<br>ou une activité ci-dessus !
+      </div>`;
+    updateStats();
+    return;
+  }
+
+  // Group by type category
+  const FOOD_TYPES = ['restaurant', 'bar', 'cafe'];
+  const ACTIVITY_TYPES = ['activity', 'museum', 'nature'];
+  const OTHER_TYPES = ['shop', 'other'];
+
+  const groups = [
+    { label: '🍽️ À manger & boire', types: FOOD_TYPES },
+    { label: '🎯 Activités & culture', types: ACTIVITY_TYPES },
+    { label: '🛍️ Autre', types: OTHER_TYPES },
+  ];
+
+  let html = '';
+
+  groups.forEach(group => {
+    const groupItems = items.filter(i => group.types.includes(i.type));
+    if (groupItems.length === 0) return;
+
+    html += `<div class="category-group">`;
+    html += `<div class="category-label">${group.label}</div>`;
+
+    groupItems.forEach(item => {
+      const hasPin = item.lat && item.lng;
+      const pinBtn = hasPin
+        ? `<button class="btn-icon" title="Voir sur la carte" onclick="focusItem('${item.id}', event)">🗺️</button>`
+        : `<button class="btn-icon" title="Pas de localisation" style="opacity:0.2;cursor:default">🗺️</button>`;
+
+      html += `
+        <div class="item-card ${item.done ? 'done' : ''} ${activeMarkerId === item.id ? 'active-pin' : ''}"
+             data-id="${item.id}"
+             onclick="focusItem('${item.id}', event)">
+          <div class="item-icon">${TYPE_ICONS[item.type]}</div>
+          <div class="item-content">
+            <div class="item-name">${escHtml(item.name)}</div>
+            ${item.address ? `<div class="item-address">📍 ${escHtml(item.address)}</div>` : ''}
+          </div>
+          <div class="item-actions">
+            ${pinBtn}
+            <button class="btn-icon" title="${item.done ? 'Marquer non fait' : 'Marquer comme fait'}"
+              onclick="event.stopPropagation(); toggleDone('${item.id}')">
+              ${item.done ? '↩️' : '✅'}
+            </button>
+            <button class="btn-icon" title="Supprimer" onclick="deleteItem('${item.id}', event)">🗑️</button>
+          </div>
+        </div>`;
+    });
+
+    html += `</div>`;
+  });
+
+  container.innerHTML = html;
+  updateStats();
+}
+
+function updateStats() {
+  const items = allItems[currentCity] || [];
+  document.getElementById('stat-total').textContent = items.length;
+  document.getElementById('stat-done').textContent = items.filter(i => i.done).length;
+  document.getElementById('stat-resto').textContent = items.filter(i => ['restaurant','bar','cafe'].includes(i.type)).length;
+  document.getElementById('stat-activ').textContent = items.filter(i => ['activity','museum','nature'].includes(i.type)).length;
+}
+
+function escHtml(str) {
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ─── CITY SWITCH ─────────────────────────────────────────────────────────────
+function switchCity(city) {
+  currentCity = city;
+  activeMarkerId = null;
+
+  // Update tabs
+  document.querySelectorAll('.city-tab').forEach(tab => {
+    tab.classList.toggle('active', tab.dataset.city === city);
+  });
+
+  // Update sidebar header
+  const info = CITIES[city];
+  document.getElementById('sidebar-city-name').textContent = info.name;
+  document.getElementById('sidebar-city-dates').textContent = info.dates;
+
+  // Move map
+  map.flyTo(info.center, info.zoom, { duration: 1.2 });
+
+  renderList();
+  renderMarkers();
+}
+
+// ─── INIT ────────────────────────────────────────────────────────────────────
+window.onload = async function() {
+  initMap();
+  allItems = await loadData();
+  // Ensure all cities exist
+  Object.keys(CITIES).forEach(c => { if (!allItems[c]) allItems[c] = []; });
+  renderList();
+  renderMarkers();
+};
+</script>
+</body>
+</html>

@@ -1,0 +1,1243 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pays Baltes & Helsinki — Mars 2025</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #0d0d0d;
+    --paper: #f5f0e8;
+    --cream: #ede8dc;
+    --gold: #c9a84c;
+    --rust: #b85c38;
+    --teal: #2d6a6a;
+    --muted: #7a7060;
+    --line: rgba(13,13,13,0.12);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 300;
+    overflow-x: hidden;
+  }
+
+  /* NOISE TEXTURE OVERLAY */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 1000;
+    opacity: 0.4;
+  }
+
+  /* HEADER */
+  header {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    padding: 60px 40px;
+    position: relative;
+    overflow: hidden;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .header-map-bg {
+    position: absolute;
+    inset: 0;
+    background: 
+      radial-gradient(ellipse 60% 80% at 30% 60%, rgba(45,106,106,0.08) 0%, transparent 70%),
+      radial-gradient(ellipse 40% 50% at 75% 30%, rgba(201,168,76,0.06) 0%, transparent 60%);
+  }
+
+  .header-route-line {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    pointer-events: none;
+  }
+
+  .trip-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 24px;
+    opacity: 0;
+    animation: fadeUp 0.8s ease forwards 0.2s;
+  }
+
+  h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(52px, 8vw, 108px);
+    line-height: 0.95;
+    font-weight: 700;
+    letter-spacing: -2px;
+    opacity: 0;
+    animation: fadeUp 0.9s ease forwards 0.4s;
+  }
+
+  h1 em {
+    font-style: italic;
+    color: var(--teal);
+  }
+
+  .header-sub {
+    margin-top: 32px;
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    color: var(--muted);
+    display: flex;
+    gap: 32px;
+    flex-wrap: wrap;
+    justify-content: center;
+    opacity: 0;
+    animation: fadeUp 0.8s ease forwards 0.6s;
+  }
+
+  .header-sub span {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .header-sub span::before {
+    content: '—';
+    color: var(--gold);
+  }
+
+  .scroll-hint {
+    position: absolute;
+    bottom: 40px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 3px;
+    color: var(--muted);
+    text-transform: uppercase;
+    animation: bounce 2s ease infinite 1.5s;
+    opacity: 0;
+    animation: fadeIn 0.5s ease forwards 1.2s, bounce 2s ease 1.7s infinite;
+  }
+
+  /* ROUTE OVERVIEW */
+  .route-strip {
+    background: var(--ink);
+    color: var(--paper);
+    padding: 28px 40px;
+    display: flex;
+    gap: 0;
+    align-items: center;
+    overflow-x: auto;
+    scrollbar-width: none;
+    white-space: nowrap;
+  }
+
+  .route-strip::-webkit-scrollbar { display: none; }
+
+  .route-city {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    opacity: 0.5;
+    transition: opacity 0.3s;
+    cursor: default;
+    flex-shrink: 0;
+  }
+
+  .route-city:hover { opacity: 1; }
+
+  .route-city.active {
+    opacity: 1;
+    color: var(--gold);
+  }
+
+  .route-arrow {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--gold);
+    padding: 0 16px;
+    opacity: 0.6;
+    flex-shrink: 0;
+  }
+
+  /* MAIN CONTENT */
+  main {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 80px 40px;
+  }
+
+  /* SECTION LABELS */
+  .section-date {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+
+  /* DAY BLOCK */
+  .day-block {
+    margin-bottom: 80px;
+    opacity: 0;
+    transform: translateY(30px);
+    transition: opacity 0.7s ease, transform 0.7s ease;
+  }
+
+  .day-block.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .day-header {
+    display: flex;
+    align-items: baseline;
+    gap: 20px;
+    margin-bottom: 32px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .day-number {
+    font-family: 'Playfair Display', serif;
+    font-size: 72px;
+    font-weight: 700;
+    color: var(--cream);
+    line-height: 1;
+    user-select: none;
+  }
+
+  .day-info h2 {
+    font-family: 'Playfair Display', serif;
+    font-size: 28px;
+    font-weight: 400;
+    line-height: 1.2;
+  }
+
+  .day-info h2 em { 
+    font-style: italic;
+    color: var(--teal);
+  }
+
+  .day-badge {
+    display: inline-block;
+    margin-top: 6px;
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    padding: 4px 10px;
+    border: 1px solid var(--line);
+    color: var(--muted);
+    border-radius: 2px;
+  }
+
+  /* CARDS */
+  .cards {
+    display: grid;
+    gap: 16px;
+  }
+
+  .card {
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    overflow: hidden;
+    transition: box-shadow 0.3s, transform 0.3s;
+    background: white;
+  }
+
+  .card:hover {
+    box-shadow: 0 8px 40px rgba(0,0,0,0.08);
+    transform: translateY(-2px);
+  }
+
+  .card-header {
+    padding: 16px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .card-type {
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: white;
+    padding: 4px 10px;
+    border-radius: 2px;
+  }
+
+  .card-type.flight { background: var(--teal); }
+  .card-type.hotel { background: var(--rust); }
+  .card-type.train { background: #5a6e3a; }
+  .card-type.bus { background: #6a4e2a; }
+  .card-type.ferry { background: #2a4e6a; }
+
+  .card-logo {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 1px;
+  }
+
+  .card-body {
+    padding: 20px 24px;
+  }
+
+  /* FLIGHT DISPLAY */
+  .flight-route {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    margin-bottom: 16px;
+  }
+
+  .flight-endpoint {
+    text-align: center;
+    min-width: 80px;
+  }
+
+  .flight-time {
+    font-family: 'Playfair Display', serif;
+    font-size: 32px;
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: -1px;
+  }
+
+  .flight-airport {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 4px;
+    letter-spacing: 2px;
+  }
+
+  .flight-duration {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .duration-line {
+    width: 100%;
+    height: 1px;
+    background: var(--line);
+    position: relative;
+  }
+
+  .duration-line::after {
+    content: '▶';
+    position: absolute;
+    right: -4px;
+    top: -7px;
+    font-size: 8px;
+    color: var(--muted);
+  }
+
+  .duration-text {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 1px;
+  }
+
+  .flight-meta {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+  }
+
+  .meta-item {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .meta-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .meta-value {
+    font-size: 13px;
+    font-weight: 500;
+  }
+
+  /* HOTEL DISPLAY */
+  .hotel-name {
+    font-family: 'Playfair Display', serif;
+    font-size: 22px;
+    font-weight: 400;
+    margin-bottom: 12px;
+  }
+
+  .hotel-details {
+    display: flex;
+    gap: 24px;
+    flex-wrap: wrap;
+  }
+
+  .hotel-detail {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .hotel-address {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 10px;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+  }
+
+  .hotel-address a {
+    color: var(--teal);
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    border-bottom: 1px solid transparent;
+    transition: border-color 0.2s;
+    font-size: 11px;
+  }
+
+  .hotel-address a:hover {
+    border-color: var(--teal);
+  }
+
+  .tax-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 1px;
+    color: var(--rust);
+    border: 1px solid var(--rust);
+    padding: 3px 10px;
+    border-radius: 2px;
+    margin-left: 8px;
+  }
+
+  .breakfast-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 1px;
+    color: #5a6e3a;
+    border: 1px solid #5a6e3a;
+    padding: 3px 10px;
+    border-radius: 2px;
+  }
+
+  .no-breakfast {
+    color: var(--muted);
+    border-color: var(--line);
+  }
+
+  /* TRANSIT DISPLAY */
+  .transit-route {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+
+  .transit-point {
+    flex: 1;
+  }
+
+  .transit-city {
+    font-family: 'Playfair Display', serif;
+    font-size: 20px;
+    font-weight: 400;
+  }
+
+  .transit-time {
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+
+  .transit-arrow {
+    font-size: 18px;
+    color: var(--gold);
+    flex-shrink: 0;
+  }
+
+  .transit-meta {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+  }
+
+  /* LAYOVER CARD */
+  .layover-card {
+    background: var(--cream);
+    border: 1px dashed var(--line);
+    border-radius: 4px;
+    padding: 16px 20px;
+    margin: 12px 0;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .layover-icon {
+    font-size: 20px;
+  }
+
+  .layover-info {
+    flex: 1;
+  }
+
+  .layover-title {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .layover-detail {
+    font-size: 13px;
+    margin-top: 2px;
+  }
+
+  /* SUMMARY SIDEBAR */
+  .trip-summary {
+    background: var(--ink);
+    color: var(--paper);
+    padding: 48px 40px;
+    margin-top: 80px;
+    border-radius: 4px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 40px;
+  }
+
+  .summary-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 32px;
+    font-weight: 400;
+    font-style: italic;
+    grid-column: 1 / -1;
+    margin-bottom: 8px;
+  }
+
+  .summary-stat {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .stat-number {
+    font-family: 'Playfair Display', serif;
+    font-size: 48px;
+    font-weight: 700;
+    line-height: 1;
+    color: var(--gold);
+  }
+
+  .stat-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    opacity: 0.5;
+  }
+
+  /* CHECKLIST */
+  .checklist {
+    margin-top: 60px;
+    padding: 32px;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+  }
+
+  .checklist h3 {
+    font-family: 'Playfair Display', serif;
+    font-size: 24px;
+    font-weight: 400;
+    margin-bottom: 20px;
+  }
+
+  .check-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--line);
+    cursor: pointer;
+    user-select: none;
+    transition: opacity 0.2s;
+  }
+
+  .check-item:last-child { border-bottom: none; }
+
+  .check-item.done { opacity: 0.4; }
+
+  .checkbox {
+    width: 18px;
+    height: 18px;
+    border: 1.5px solid var(--ink);
+    border-radius: 2px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    transition: all 0.2s;
+  }
+
+  .check-item.done .checkbox {
+    background: var(--teal);
+    border-color: var(--teal);
+    color: white;
+  }
+
+  .check-text {
+    font-size: 14px;
+  }
+
+  .check-item.done .check-text {
+    text-decoration: line-through;
+  }
+
+  /* FOOTER */
+  footer {
+    text-align: center;
+    padding: 40px;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 2px;
+    border-top: 1px solid var(--line);
+  }
+
+  /* ANIMATIONS */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 0.6; }
+  }
+
+  @keyframes bounce {
+    0%, 100% { transform: translateX(-50%) translateY(0); }
+    50% { transform: translateX(-50%) translateY(8px); }
+  }
+
+  /* RESPONSIVE */
+  @media (max-width: 600px) {
+    main { padding: 60px 20px; }
+    .flight-route { gap: 12px; }
+    .flight-time { font-size: 24px; }
+    .trip-summary { grid-template-columns: 1fr; padding: 32px 24px; }
+    .day-number { font-size: 48px; }
+    h1 { letter-spacing: -1px; }
+    .route-strip { padding: 20px 24px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <div class="header-map-bg"></div>
+  <a href="baltics-activities.html" style="position:absolute;top:28px;right:40px;font-family:'DM Mono',monospace;font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);text-decoration:none;border:1px solid var(--line);padding:8px 16px;border-radius:3px;transition:all 0.2s;background:rgba(255,255,255,0.5)" onmouseover="this.style.borderColor='#2d6a6a';this.style.color='#0d0d0d'" onmouseout="this.style.borderColor='rgba(13,13,13,0.12)';this.style.color='#7a7060'">🗺️ Activités & Restos →</a>
+  <p class="trip-label">Carnet de voyage · 02 – 11 Mars 2026</p>
+  <h1>Pays <em>Baltes</em><br>&amp; Helsinki</h1>
+  <div class="header-sub">
+    <span>Vilnius</span>
+    <span>Riga</span>
+    <span>Tallinn</span>
+    <span>Helsinki</span>
+  </div>
+  <div class="scroll-hint">↓ Défiler</div>
+</header>
+
+<!-- ROUTE STRIP -->
+<div class="route-strip">
+  <span class="route-city active">Basel</span>
+  <span class="route-arrow">✈</span>
+  <span class="route-city">Budapest</span>
+  <span class="route-arrow">✈</span>
+  <span class="route-city">Vilnius</span>
+  <span class="route-arrow">🚂</span>
+  <span class="route-city">Riga</span>
+  <span class="route-arrow">🚌</span>
+  <span class="route-city">Tallinn</span>
+  <span class="route-arrow">⛴</span>
+  <span class="route-city">Helsinki</span>
+  <span class="route-arrow">✈</span>
+  <span class="route-city">Amsterdam</span>
+  <span class="route-arrow">✈</span>
+  <span class="route-city">Basel</span>
+</div>
+
+<!-- MAIN -->
+<main>
+
+  <!-- DAY 1 : 2 MARS -->
+  <div class="day-block" id="day1">
+    <div class="section-date">Dimanche 02 Mars</div>
+    <div class="day-header">
+      <div class="day-number">01</div>
+      <div class="day-info">
+        <h2>Basel → Budapest → <em>Vilnius</em></h2>
+        <span class="day-badge">Jour de départ</span>
+      </div>
+    </div>
+
+    <div class="cards">
+      <!-- Vol 1 -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-type flight">✈ Vol</span>
+          <span class="card-logo">easyJet</span>
+        </div>
+        <div class="card-body">
+          <div class="flight-route">
+            <div class="flight-endpoint">
+              <div class="flight-time">07:00</div>
+              <div class="flight-airport">BSL</div>
+            </div>
+            <div class="flight-duration">
+              <div class="duration-text">1h 40</div>
+              <div class="duration-line"></div>
+            </div>
+            <div class="flight-endpoint">
+              <div class="flight-time">08:40</div>
+              <div class="flight-airport">BUD</div>
+            </div>
+          </div>
+          <div class="flight-meta">
+            <div class="meta-item"><span class="meta-label">De</span><span class="meta-value">Bâle-Mulhouse (BSL)</span></div>
+            <div class="meta-item"><span class="meta-label">À</span><span class="meta-value">Budapest (BUD)</span></div>
+            <div class="meta-item"><span class="meta-label">Compagnie</span><span class="meta-value">easyJet</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Escale -->
+      <div class="layover-card">
+        <div class="layover-icon">⏳</div>
+        <div class="layover-info">
+          <div class="layover-title">Escale · Budapest</div>
+          <div class="layover-detail">2h 45 de transit — 08:40 → 11:25</div>
+        </div>
+      </div>
+
+      <!-- Vol 2 -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-type flight">✈ Vol</span>
+          <span class="card-logo">Wizz Air</span>
+        </div>
+        <div class="card-body">
+          <div class="flight-route">
+            <div class="flight-endpoint">
+              <div class="flight-time">11:25</div>
+              <div class="flight-airport">BUD</div>
+            </div>
+            <div class="flight-duration">
+              <div class="duration-text">2h 40</div>
+              <div class="duration-line"></div>
+            </div>
+            <div class="flight-endpoint">
+              <div class="flight-time">14:05</div>
+              <div class="flight-airport">VNO</div>
+            </div>
+          </div>
+          <div class="flight-meta">
+            <div class="meta-item"><span class="meta-label">De</span><span class="meta-value">Budapest (BUD)</span></div>
+            <div class="meta-item"><span class="meta-label">À</span><span class="meta-value">Vilnius (VNO)</span></div>
+            <div class="meta-item"><span class="meta-label">Compagnie</span><span class="meta-value">Wizz Air</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Hôtel Vilnius -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-type hotel">🏨 Hôtel</span>
+          <span class="card-logo">02 – 04 Mars</span>
+        </div>
+        <div class="card-body">
+          <div class="hotel-name">Artagonist Art Hotel</div>
+          <div class="hotel-details">
+            <div class="hotel-detail">
+              <span class="meta-label">Ville</span>
+              <span class="meta-value">Vilnius, Lituanie</span>
+            </div>
+            <div class="hotel-detail">
+              <span class="meta-label">Durée</span>
+              <span class="meta-value">2 nuits</span>
+            </div>
+            <div class="hotel-detail">
+              <span class="meta-label">Check-in</span>
+              <span class="meta-value">02 Mars</span>
+            </div>
+            <div class="hotel-detail">
+              <span class="meta-label">Check-out</span>
+              <span class="meta-value">04 Mars</span>
+            </div>
+          </div>
+          <div style="margin-top:14px">
+            <span class="breakfast-badge">☕ Petit-déjeuner inclus</span>
+          </div>
+          <div class="hotel-address">
+            📍 Pilies g. 34, Vilnius, 01123 &nbsp;·&nbsp;
+            <a href="https://maps.app.goo.gl/LS32DLjGTG6bZFyYA" target="_blank">Voir sur Maps ↗</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DAY 3 : 4 MARS -->
+  <div class="day-block" id="day3">
+    <div class="section-date">Mardi 04 Mars</div>
+    <div class="day-header">
+      <div class="day-number">03</div>
+      <div class="day-info">
+        <h2>Vilnius → <em>Riga</em></h2>
+        <span class="day-badge">Train</span>
+      </div>
+    </div>
+
+    <div class="cards">
+      <div class="card">
+        <div class="card-header">
+          <span class="card-type train">🚂 Train</span>
+          <span class="card-logo">Rail Baltica</span>
+        </div>
+        <div class="card-body">
+          <div class="transit-route">
+            <div class="transit-point">
+              <div class="transit-city">Vilnius</div>
+              <div class="transit-time">07:04</div>
+            </div>
+            <div class="transit-arrow">→</div>
+            <div class="transit-point" style="text-align:right">
+              <div class="transit-city">Riga</div>
+              <div class="transit-time">11:34</div>
+            </div>
+          </div>
+          <div class="transit-meta">
+            <div class="meta-item"><span class="meta-label">Durée</span><span class="meta-value">4h 30</span></div>
+            <div class="meta-item"><span class="meta-label">Départ</span><span class="meta-value">Gare de Vilnius</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <span class="card-type hotel">🏨 Hôtel</span>
+          <span class="card-logo">04 – 06 Mars</span>
+        </div>
+        <div class="card-body">
+          <div class="hotel-name">Konventa Sēta</div>
+          <div class="hotel-details">
+            <div class="hotel-detail">
+              <span class="meta-label">Ville</span>
+              <span class="meta-value">Riga, Lettonie</span>
+            </div>
+            <div class="hotel-detail">
+              <span class="meta-label">Durée</span>
+              <span class="meta-value">2 nuits</span>
+            </div>
+            <div class="hotel-detail">
+              <span class="meta-label">Check-in</span>
+              <span class="meta-value">04 Mars</span>
+            </div>
+            <div class="hotel-detail">
+              <span class="meta-label">Check-out</span>
+              <span class="meta-value">06 Mars</span>
+            </div>
+          </div>
+          <div style="margin-top:14px; display:flex; flex-wrap:wrap; align-items:center; gap:8px">
+            <span class="breakfast-badge">☕ Petit-déjeuner inclus</span>
+            <span class="tax-badge">💶 Taxe de séjour : 4 € à payer sur place</span>
+          </div>
+          <div class="hotel-address">
+            📍 Kalēju iela 9/11, Centra rajons, Rīga, LV-1050, Lettonie &nbsp;·&nbsp;
+            <a href="https://maps.app.goo.gl/feHK1KELw9qnEXiH8" target="_blank">Voir sur Maps ↗</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DAY 5 : 6 MARS -->
+  <div class="day-block" id="day5">
+    <div class="section-date">Jeudi 06 Mars</div>
+    <div class="day-header">
+      <div class="day-number">05</div>
+      <div class="day-info">
+        <h2>Riga → <em>Tallinn</em></h2>
+        <span class="day-badge">Bus Luxexpress</span>
+      </div>
+    </div>
+
+    <div class="cards">
+      <div class="card">
+        <div class="card-header">
+          <span class="card-type bus">🚌 Bus</span>
+          <span class="card-logo">Lux Express</span>
+        </div>
+        <div class="card-body">
+          <div class="transit-route">
+            <div class="transit-point">
+              <div class="transit-city">Riga</div>
+              <div class="transit-time">09:00</div>
+            </div>
+            <div class="transit-arrow">→</div>
+            <div class="transit-point" style="text-align:right">
+              <div class="transit-city">Tallinn</div>
+              <div class="transit-time">13:25</div>
+            </div>
+          </div>
+          <div class="transit-meta">
+            <div class="meta-item"><span class="meta-label">Durée</span><span class="meta-value">4h 25</span></div>
+            <div class="meta-item"><span class="meta-label">Départ depuis</span><span class="meta-value">Riga Coach Station</span></div>
+            <div class="meta-item"><span class="meta-label">Sièges</span><span class="meta-value">41 &amp; 42</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <span class="card-type hotel">🏨 Hôtel</span>
+          <span class="card-logo">06 – 08 Mars</span>
+        </div>
+        <div class="card-body">
+          <div class="hotel-name">Citybox Tallinn City Center</div>
+          <div class="hotel-details">
+            <div class="hotel-detail">
+              <span class="meta-label">Ville</span>
+              <span class="meta-value">Tallinn, Estonie</span>
+            </div>
+            <div class="hotel-detail">
+              <span class="meta-label">Durée</span>
+              <span class="meta-value">2 nuits</span>
+            </div>
+            <div class="hotel-detail">
+              <span class="meta-label">Check-in</span>
+              <span class="meta-value">06 Mars</span>
+            </div>
+            <div class="hotel-detail">
+              <span class="meta-label">Check-out</span>
+              <span class="meta-value">08 Mars</span>
+            </div>
+          </div>
+          <div style="margin-top:14px">
+            <span class="breakfast-badge no-breakfast">✗ Sans petit-déjeuner</span>
+          </div>
+          <div class="hotel-address">
+            📍 Laeva tn 1, 10151 Tallinn, Estonie &nbsp;·&nbsp;
+            <a href="https://maps.app.goo.gl/cK2U5R4yzBa5c9b16" target="_blank">Voir sur Maps ↗</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DAY 7 : 8 MARS -->
+  <div class="day-block" id="day7">
+    <div class="section-date">Samedi 08 Mars</div>
+    <div class="day-header">
+      <div class="day-number">07</div>
+      <div class="day-info">
+        <h2>Tallinn → <em>Helsinki</em></h2>
+        <span class="day-badge">Ferry Tallink</span>
+      </div>
+    </div>
+
+    <div class="cards">
+      <div class="card">
+        <div class="card-header">
+          <span class="card-type ferry">⛴ Ferry</span>
+          <span class="card-logo">Tallink Shuttle</span>
+        </div>
+        <div class="card-body">
+          <div class="transit-route">
+            <div class="transit-point">
+              <div class="transit-city">Tallinn</div>
+              <div class="transit-time">10:30</div>
+            </div>
+            <div class="transit-arrow">→</div>
+            <div class="transit-point" style="text-align:right">
+              <div class="transit-city">Helsinki</div>
+              <div class="transit-time">12:30</div>
+            </div>
+          </div>
+          <div class="transit-meta">
+            <div class="meta-item"><span class="meta-label">Durée</span><span class="meta-value">2h 00</span></div>
+            <div class="meta-item"><span class="meta-label">Compagnie</span><span class="meta-value">Tallink Shuttle</span></div>
+            <div class="meta-item"><span class="meta-label">Traversée</span><span class="meta-value">Golfe de Finlande</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <span class="card-type hotel">🏨 Hôtel</span>
+          <span class="card-logo">08 – 11 Mars</span>
+        </div>
+        <div class="card-body">
+          <div class="hotel-name">Hobo Helsinki</div>
+          <div class="hotel-details">
+            <div class="hotel-detail">
+              <span class="meta-label">Ville</span>
+              <span class="meta-value">Helsinki, Finlande</span>
+            </div>
+            <div class="hotel-detail">
+              <span class="meta-label">Durée</span>
+              <span class="meta-value">3 nuits</span>
+            </div>
+            <div class="hotel-detail">
+              <span class="meta-label">Check-in</span>
+              <span class="meta-value">08 Mars</span>
+            </div>
+            <div class="hotel-detail">
+              <span class="meta-label">Check-out</span>
+              <span class="meta-value">11 Mars</span>
+            </div>
+          </div>
+          <div style="margin-top:14px">
+            <span class="breakfast-badge">☕ Petit-déjeuner inclus</span>
+          </div>
+          <div class="hotel-address">
+            📍 Kluuvikatu 4, 00100 Helsinki, Finlande &nbsp;·&nbsp;
+            <a href="https://maps.app.goo.gl/3ZE9FeK3h8zWzLUEA" target="_blank">Voir sur Maps ↗</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DAY 10 : 11 MARS -->
+  <div class="day-block" id="day10">
+    <div class="section-date">Mercredi 11 Mars</div>
+    <div class="day-header">
+      <div class="day-number">10</div>
+      <div class="day-info">
+        <h2>Helsinki → Amsterdam → <em>Basel</em></h2>
+        <span class="day-badge">Retour · KLM</span>
+      </div>
+    </div>
+
+    <div class="cards">
+      <div class="card">
+        <div class="card-header">
+          <span class="card-type flight">✈ Vol</span>
+          <span class="card-logo">KLM</span>
+        </div>
+        <div class="card-body">
+          <div class="flight-route">
+            <div class="flight-endpoint">
+              <div class="flight-time">18:20</div>
+              <div class="flight-airport">HEL</div>
+            </div>
+            <div class="flight-duration">
+              <div class="duration-text">2h 35</div>
+              <div class="duration-line"></div>
+            </div>
+            <div class="flight-endpoint">
+              <div class="flight-time">19:55</div>
+              <div class="flight-airport">AMS</div>
+            </div>
+          </div>
+          <div class="flight-meta">
+            <div class="meta-item"><span class="meta-label">De</span><span class="meta-value">Helsinki (HEL)</span></div>
+            <div class="meta-item"><span class="meta-label">À</span><span class="meta-value">Amsterdam (AMS)</span></div>
+            <div class="meta-item"><span class="meta-label">Compagnie</span><span class="meta-value">KLM</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="layover-card">
+        <div class="layover-icon">⏳</div>
+        <div class="layover-info">
+          <div class="layover-title">Correspondance · Amsterdam Schiphol</div>
+          <div class="layover-detail">1h 00 de transit — 19:55 → 20:55</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <span class="card-type flight">✈ Vol</span>
+          <span class="card-logo">KLM</span>
+        </div>
+        <div class="card-body">
+          <div class="flight-route">
+            <div class="flight-endpoint">
+              <div class="flight-time">20:55</div>
+              <div class="flight-airport">AMS</div>
+            </div>
+            <div class="flight-duration">
+              <div class="duration-text">1h 10</div>
+              <div class="duration-line"></div>
+            </div>
+            <div class="flight-endpoint">
+              <div class="flight-time">22:05</div>
+              <div class="flight-airport">BSL</div>
+            </div>
+          </div>
+          <div class="flight-meta">
+            <div class="meta-item"><span class="meta-label">De</span><span class="meta-value">Amsterdam (AMS)</span></div>
+            <div class="meta-item"><span class="meta-label">À</span><span class="meta-value">Bâle-Mulhouse (BSL)</span></div>
+            <div class="meta-item"><span class="meta-label">Compagnie</span><span class="meta-value">KLM</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SUMMARY -->
+  <div class="trip-summary">
+    <div class="summary-title">En résumé</div>
+    <div class="summary-stat">
+      <div class="stat-number">10</div>
+      <div class="stat-label">Jours de voyage</div>
+    </div>
+    <div class="summary-stat">
+      <div class="stat-number">4</div>
+      <div class="stat-label">Pays visités</div>
+    </div>
+    <div class="summary-stat">
+      <div class="stat-number">5</div>
+      <div class="stat-label">Villes</div>
+    </div>
+    <div class="summary-stat">
+      <div class="stat-number">4</div>
+      <div class="stat-label">Hôtels</div>
+    </div>
+    <div class="summary-stat">
+      <div class="stat-number">4</div>
+      <div class="stat-label">Vols</div>
+    </div>
+    <div class="summary-stat">
+      <div class="stat-number">3</div>
+      <div class="stat-label">Modes de transport terrestres</div>
+    </div>
+  </div>
+
+  <!-- CHECKLIST -->
+  <div class="checklist">
+    <h3>Liste de vérification ✓</h3>
+    <div class="check-item" onclick="this.classList.toggle('done')">
+      <div class="checkbox">✓</div>
+      <span class="check-text">Vol easyJet BSL → BUD confirmé (07:00)</span>
+    </div>
+    <div class="check-item" onclick="this.classList.toggle('done')">
+      <div class="checkbox">✓</div>
+      <span class="check-text">Vol Wizz Air BUD → VNO confirmé (11:25)</span>
+    </div>
+    <div class="check-item" onclick="this.classList.toggle('done')">
+      <div class="checkbox">✓</div>
+      <span class="check-text">Hôtel Artagonist Art Hotel (02–04 Mars)</span>
+    </div>
+    <div class="check-item" onclick="this.classList.toggle('done')">
+      <div class="checkbox">✓</div>
+      <span class="check-text">Train Vilnius → Riga (07:04) réservé</span>
+    </div>
+    <div class="check-item" onclick="this.classList.toggle('done')">
+      <div class="checkbox">✓</div>
+      <span class="check-text">Hôtel Konventa Sēta (04–06 Mars)</span>
+    </div>
+    <div class="check-item" onclick="this.classList.toggle('done')">
+      <div class="checkbox">✓</div>
+      <span class="check-text">Bus Lux Express Riga → Tallinn — sièges 41 &amp; 42</span>
+    </div>
+    <div class="check-item" onclick="this.classList.toggle('done')">
+      <div class="checkbox">✓</div>
+      <span class="check-text">Hôtel Citybox Tallinn (06–08 Mars)</span>
+    </div>
+    <div class="check-item" onclick="this.classList.toggle('done')">
+      <div class="checkbox">✓</div>
+      <span class="check-text">Ferry Tallink Shuttle Tallinn → Helsinki (10:30)</span>
+    </div>
+    <div class="check-item" onclick="this.classList.toggle('done')">
+      <div class="checkbox">✓</div>
+      <span class="check-text">Hôtel Hobo Helsinki (08–11 Mars)</span>
+    </div>
+    <div class="check-item" onclick="this.classList.toggle('done')">
+      <div class="checkbox">✓</div>
+      <span class="check-text">Vol KLM HEL → AMS → BSL (18:20)</span>
+    </div>
+    <div class="check-item" onclick="this.classList.toggle('done')">
+      <div class="checkbox">✓</div>
+      <span class="check-text">Documents de voyage &amp; assurance</span>
+    </div>
+    <div class="check-item" onclick="this.classList.toggle('done')">
+      <div class="checkbox">✓</div>
+      <span class="check-text">Monnaies locales / carte bancaire</span>
+    </div>
+  </div>
+
+</main>
+
+<footer>
+  Pays Baltes &amp; Helsinki · Mars 2026 · Bon voyage ! 🌍
+</footer>
+
+<script>
+  // Intersection Observer for scroll animations
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('visible');
+      }
+    });
+  }, { threshold: 0.1 });
+
+  document.querySelectorAll('.day-block').forEach(block => {
+    observer.observe(block);
+  });
+
+  // Route strip highlighting based on scroll position
+  const sections = ['day1', 'day3', 'day5', 'day7', 'day10'];
+  const cities = ['Basel / Vilnius', 'Riga', 'Tallinn', 'Helsinki', 'Basel'];
+  
+  const scrollObserver = new IntersectionObserver((entries) => {
+    // simple: just animate route cities on hover
+  }, { threshold: 0.5 });
+</script>
+</body>
+</html>
