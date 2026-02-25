@@ -366,18 +366,144 @@
     color: var(--ink);
   }
 
+  /* Mobile bottom tabs — hidden on desktop */
+  .mobile-tabs { display: none; }
+
   @media (max-width: 768px) {
     body {
       grid-template-columns: 1fr;
-      grid-template-rows: 64px 50vh 1fr;
+      grid-template-rows: auto auto 1fr;
+      height: 100dvh;
+      overflow: hidden;
     }
+
+    nav {
+      flex-wrap: wrap;
+      gap: 0;
+      padding: 0;
+      height: auto;
+    }
+
+    .nav-title {
+      padding: 12px 16px;
+      font-size: 15px;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .nav-back {
+      margin-left: 0;
+      font-size: 9px;
+      padding: 0;
+      opacity: 0.5;
+    }
+
+    .nav-cities {
+      width: 100%;
+      margin: 0;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 0;
+      border-top: 1px solid rgba(255,255,255,0.08);
+    }
+
+    .city-tab {
+      padding: 10px 4px;
+      font-size: 9px;
+      letter-spacing: 1px;
+      text-align: center;
+      border-radius: 0;
+      border: none;
+      border-right: 1px solid rgba(255,255,255,0.08);
+    }
+
+    .city-tab:last-child { border-right: none; }
+
     aside {
       border-right: none;
-      border-bottom: 1px solid var(--line);
+      display: none;
+      flex-direction: column;
+      height: calc(100dvh - 120px);
+      overflow: hidden;
     }
-    #map { min-height: 300px; }
-    .nav-cities { gap: 2px; }
-    .city-tab { padding: 5px 8px; font-size: 9px; }
+
+    aside.mobile-active { display: flex; }
+
+    #map {
+      display: none;
+      height: calc(100dvh - 120px);
+    }
+
+    #map.mobile-active { display: block; }
+
+    /* Mobile bottom tab bar */
+    .mobile-tabs {
+      display: flex;
+      background: var(--ink);
+      border-top: 1px solid rgba(255,255,255,0.1);
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      z-index: 1000;
+      height: 56px;
+    }
+
+    .mobile-tab {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 3px;
+      font-family: 'DM Mono', monospace;
+      font-size: 9px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: rgba(245,240,232,0.4);
+      cursor: pointer;
+      transition: color 0.2s;
+      border: none;
+      background: none;
+    }
+
+    .mobile-tab.active { color: var(--gold); }
+    .mobile-tab-icon { font-size: 18px; }
+
+    /* Adjust sidebar for mobile */
+    .sidebar-header { padding: 14px 16px 12px; }
+    .city-name { font-size: 20px; }
+
+    .add-form { padding: 12px 16px; }
+
+    .form-row {
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .input-name { min-width: 0; width: 100%; }
+    .input-type { width: 100%; }
+    .input-address { min-width: 0; width: calc(100% - 90px); }
+    .btn-add { width: 84px; }
+
+    .map-hint { padding: 6px 16px; font-size: 8px; }
+
+    .items-list {
+      padding: 8px 12px;
+      padding-bottom: 64px;
+    }
+
+    .stats-bar {
+      display: none;
+    }
+
+    /* Make item cards more touch-friendly */
+    .item-card { padding: 12px 10px; }
+    .item-name { font-size: 15px; }
+    .btn-icon { font-size: 18px; padding: 4px 6px; opacity: 0.6; }
   }
 </style>
 </head>
@@ -438,6 +564,18 @@
 
 <!-- MAP -->
 <div id="map"></div>
+
+<!-- MOBILE BOTTOM TABS (hidden on desktop) -->
+<div class="mobile-tabs" id="mobile-tabs">
+  <button class="mobile-tab active" id="tab-liste" onclick="mobileSwitch('liste')">
+    <span class="mobile-tab-icon">📋</span>
+    Liste
+  </button>
+  <button class="mobile-tab" id="tab-carte" onclick="mobileSwitch('carte')">
+    <span class="mobile-tab-icon">🗺️</span>
+    Carte
+  </button>
+</div>
 
 <script>
 // ─── DATA ───────────────────────────────────────────────────────────────────
@@ -797,11 +935,69 @@ function switchCity(city) {
   renderMarkers();
 }
 
+// ─── MOBILE ──────────────────────────────────────────────────────────────────
+function isMobile() { return window.innerWidth <= 768; }
+
+function mobileSwitch(view) {
+  if (!isMobile()) return;
+  const aside = document.querySelector('aside');
+  const mapEl = document.getElementById('map');
+  const tabListe = document.getElementById('tab-liste');
+  const tabCarte = document.getElementById('tab-carte');
+
+  if (view === 'liste') {
+    aside.classList.add('mobile-active');
+    mapEl.classList.remove('mobile-active');
+    tabListe.classList.add('active');
+    tabCarte.classList.remove('active');
+  } else {
+    aside.classList.remove('mobile-active');
+    mapEl.classList.add('mobile-active');
+    tabListe.classList.remove('active');
+    tabCarte.classList.add('active');
+    // Refresh map size after display change
+    setTimeout(() => map && map.invalidateSize(), 100);
+  }
+}
+
+function initMobileLayout() {
+  if (isMobile()) {
+    document.querySelector('aside').classList.add('mobile-active');
+    document.getElementById('mobile-tabs').style.display = 'flex';
+  } else {
+    document.querySelector('aside').style.display = 'flex';
+    document.getElementById('map').style.display = 'block';
+    document.getElementById('mobile-tabs').style.display = 'none';
+  }
+}
+
+window.addEventListener('resize', () => {
+  initMobileLayout();
+  if (!isMobile()) {
+    document.querySelector('aside').classList.remove('mobile-active');
+    document.getElementById('map').classList.remove('mobile-active');
+  }
+});
+
+// Override focusItem on mobile to auto-switch to map
+const _focusItem = focusItem;
+function focusItem(id, e) {
+  if (e) e.stopPropagation();
+  const item = allItems[currentCity].find(i => i.id === id);
+  if (!item) return;
+  highlightItem(id);
+  if (item.lat && item.lng) {
+    if (isMobile()) mobileSwitch('carte');
+    map.flyTo([item.lat, item.lng], 17, { duration: 0.8 });
+    setTimeout(() => { if (markers[id]) markers[id].openPopup(); }, 900);
+  }
+}
+
 // ─── INIT ────────────────────────────────────────────────────────────────────
 window.onload = async function() {
+  initMobileLayout();
   initMap();
   allItems = await loadData();
-  // Ensure all cities exist
   Object.keys(CITIES).forEach(c => { if (!allItems[c]) allItems[c] = []; });
   renderList();
   renderMarkers();
